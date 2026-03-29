@@ -58,8 +58,72 @@ const CATEGORY_COLORS: Record<string, string> = {
   metric: "bg-amber-500/10 text-amber-500 border-amber-500/20",
 };
 
-type ModuleWithTasks = Module & { tasks: Task[] };
+type ModuleWithTasks = Module & { tasks: Task[]; guide?: string | null; defaultTasks?: string | null };
 type SegmentDetail = Segment & { modules: ModuleWithTasks[]; bestPractices: BestPractice[] };
+
+function renderGuide(guide: string): React.ReactNode {
+  const lines = guide.split('\n');
+  const elements: React.ReactNode[] = [];
+  let listItems: React.ReactNode[] = [];
+  let listType: 'ul' | 'ol' | null = null;
+
+  const flushList = () => {
+    if (listItems.length > 0 && listType) {
+      if (listType === 'ul') {
+        elements.push(<ul key={`ul-${elements.length}`} className="list-disc list-inside space-y-1 text-sm text-muted-foreground ml-2">{listItems}</ul>);
+      } else {
+        elements.push(<ol key={`ol-${elements.length}`} className="list-decimal list-inside space-y-1 text-sm text-muted-foreground ml-2">{listItems}</ol>);
+      }
+      listItems = [];
+      listType = null;
+    }
+  };
+
+  const formatInline = (text: string): React.ReactNode => {
+    // Handle **bold** text
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <strong key={i} className="text-foreground font-semibold">{part.slice(2, -2)}</strong>;
+      }
+      return part;
+    });
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    if (line.startsWith('## ')) {
+      flushList();
+      elements.push(
+        <h3 key={`h-${i}`} className="text-sm font-display font-bold text-foreground mt-4 mb-1.5 first:mt-0">
+          {line.slice(3)}
+        </h3>
+      );
+    } else if (line.startsWith('- ')) {
+      if (listType !== 'ul') flushList();
+      listType = 'ul';
+      listItems.push(<li key={`li-${i}`} className="text-sm text-muted-foreground">{formatInline(line.slice(2))}</li>);
+    } else if (/^\d+\.\s/.test(line)) {
+      if (listType !== 'ol') flushList();
+      listType = 'ol';
+      const content = line.replace(/^\d+\.\s/, '');
+      listItems.push(<li key={`li-${i}`} className="text-sm text-muted-foreground">{formatInline(content)}</li>);
+    } else if (line.trim() === '') {
+      flushList();
+    } else {
+      flushList();
+      elements.push(
+        <p key={`p-${i}`} className="text-sm text-muted-foreground leading-relaxed">
+          {formatInline(line)}
+        </p>
+      );
+    }
+  }
+  flushList();
+
+  return <div className="space-y-2">{elements}</div>;
+}
 
 function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: number }) {
   const [open, setOpen] = useState(false);
@@ -151,7 +215,22 @@ function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: numbe
         </CollapsibleTrigger>
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-0 border-t border-border">
-            <div className="pt-3 space-y-2">
+            {/* Guide Content */}
+            {mod.guide && (
+              <div className="pt-3 pb-3 border-b border-border/50 mb-3">
+                {renderGuide(mod.guide)}
+              </div>
+            )}
+            {/* Task Progress Bar */}
+            {mod.tasks && mod.tasks.length > 0 && (
+              <div className="flex items-center gap-3 pt-2 pb-2">
+                <Progress value={mod.tasks.length > 0 ? Math.round((mod.tasks.filter(t => t.status === "completed").length / mod.tasks.length) * 100) : 0} className="flex-1 h-2" />
+                <span className="text-xs font-mono text-muted-foreground shrink-0">
+                  {mod.tasks.filter(t => t.status === "completed").length}/{mod.tasks.length} tasks
+                </span>
+              </div>
+            )}
+            <div className="pt-1 space-y-2">
               {mod.tasks && mod.tasks.length > 0 ? mod.tasks.map(task => (
                 <div key={task.id} className="flex items-center gap-2 group" data-testid={`task-${task.id}`}>
                   <button

@@ -32,6 +32,8 @@ function seedDatabase() {
         status: "not_started",
         progress: 0,
         order: mod.order,
+        guide: (mod as any).guide || null,
+        defaultTasks: (mod as any).defaultTasks || null,
       });
     }
 
@@ -99,6 +101,31 @@ export async function registerRoutes(
 
     const mods = storage.getModulesBySegment(seg.id);
     const bps = storage.getBestPracticesBySegment(seg.id);
+
+    // Auto-create default tasks for modules that have defaultTasks but no tasks yet
+    for (const mod of mods) {
+      if (mod.defaultTasks) {
+        const existingTasks = storage.getTasksByModule(mod.id);
+        if (existingTasks.length === 0) {
+          try {
+            const taskTitles: string[] = JSON.parse(mod.defaultTasks);
+            taskTitles.forEach((title, i) => {
+              storage.createTask({
+                moduleId: mod.id,
+                segmentId: seg.id,
+                title,
+                status: "pending",
+                priority: "medium",
+                order: i + 1,
+              });
+            });
+          } catch (e) {
+            // Skip if defaultTasks is not valid JSON
+          }
+        }
+      }
+    }
+
     const segTasks = storage.getTasksBySegment(seg.id);
 
     const modulesWithTasks = mods.map(mod => ({

@@ -24,6 +24,8 @@ export const modules = sqliteTable("modules", {
   status: text("status").notNull().default("not_started"),
   progress: integer("progress").notNull().default(0),
   order: integer("order").notNull(),
+  guide: text("guide"),
+  defaultTasks: text("default_tasks"),
 });
 
 export const bestPractices = sqliteTable("best_practices", {

@@ -34,7 +34,9 @@ sqlite.exec(`
     description TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'not_started',
     progress INTEGER NOT NULL DEFAULT 0,
-    "order" INTEGER NOT NULL
+    "order" INTEGER NOT NULL,
+    guide TEXT,
+    default_tasks TEXT
   );
   CREATE TABLE IF NOT EXISTS best_practices (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
