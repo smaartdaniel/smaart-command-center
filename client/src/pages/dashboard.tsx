@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Input } from "@/components/ui/input";
 import {
   Database, Smartphone, MapPin, Layout, Tv, Search,
   BookOpen, Handshake, Mail, Activity, BarChart3, Paintbrush, Crosshair,
@@ -216,6 +215,8 @@ function SegmentCard({ segment }: { segment: SegmentWithCount }) {
 }
 
 export default function Dashboard() {
+  const [searchQuery, setSearchQuery] = useState("");
+
   const { data: stats, isLoading: statsLoading } = useQuery<Stats>({
     queryKey: ["/api/stats"],
   });
@@ -224,9 +225,13 @@ export default function Dashboard() {
     queryKey: ["/api/segments"],
   });
 
-  const strategies = segments?.filter(s => s.category === "strategy") || [];
-  const operations = segments?.filter(s => s.category === "operations") || [];
-  const intelligence = segments?.filter(s => s.category === "intelligence") || [];
+  const filtered = searchQuery
+    ? segments?.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase())) || []
+    : segments || [];
+
+  const strategies = filtered.filter(s => s.category === "strategy");
+  const operations = filtered.filter(s => s.category === "operations");
+  const intelligence = filtered.filter(s => s.category === "intelligence");
 
   return (
     <div className="h-full overflow-y-auto">
@@ -244,6 +249,19 @@ export default function Dashboard() {
         {segments && segments.length > 0 && (
           <SegmentProgressChart segments={segments} />
         )}
+
+        {/* Search */}
+        <div className="relative" data-testid="segment-search">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search segments..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 h-9 text-sm rounded-md border border-border bg-background px-3 py-1 shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            data-testid="input-search-segments"
+          />
+        </div>
 
         {/* Segment Grid */}
         {segLoading ? (
