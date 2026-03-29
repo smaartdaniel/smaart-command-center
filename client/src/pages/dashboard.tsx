@@ -1,15 +1,18 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   Database, Smartphone, MapPin, Layout, Tv, Search,
   BookOpen, Handshake, Mail, Activity, BarChart3, Paintbrush, Crosshair,
   Twitter, Layers, Zap, CheckCircle2, Flag, ArrowRight,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { Segment } from "@shared/schema";
 
 const ICON_MAP: Record<string, any> = {
@@ -129,7 +132,12 @@ function KPICards({ stats }: { stats?: Stats }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Plan Status</p>
-              <Badge variant="outline" className="mt-2 text-xs border-primary text-primary">Phase 1 — Foundation</Badge>
+              <Badge variant="outline" className="mt-2 text-xs border-primary text-primary">
+                {stats.averageProgress <= 25 ? "Phase 1 — Foundation" :
+                 stats.averageProgress <= 50 ? "Phase 2 — Launch" :
+                 stats.averageProgress <= 75 ? "Phase 3 — Scale" :
+                 "Phase 4 — Optimize"}
+              </Badge>
             </div>
             <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
               <Flag className="w-5 h-5 text-amber-500" />
@@ -138,6 +146,42 @@ function KPICards({ stats }: { stats?: Stats }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const CHART_COLORS = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444", "#ec4899", "#06b6d4", "#84cc16"];
+
+function SegmentProgressChart({ segments }: { segments: SegmentWithCount[] }) {
+  const data = segments.map(s => ({
+    name: s.name.length > 14 ? s.name.slice(0, 12) + "..." : s.name,
+    progress: s.progress,
+    fullName: s.name,
+  }));
+
+  return (
+    <Card className="border border-card-border" data-testid="card-progress-chart">
+      <CardContent className="p-5">
+        <h2 className="text-sm font-display font-bold mb-4">Segment Progress</h2>
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+              <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={60} />
+              <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} tickFormatter={(v: number) => `${v}%`} />
+              <Tooltip
+                formatter={(value: number) => [`${value}%`, "Progress"]}
+                labelFormatter={(_: any, payload: any[]) => payload?.[0]?.payload?.fullName || ""}
+                contentStyle={{ fontSize: 12 }}
+              />
+              <Bar dataKey="progress" radius={[4, 4, 0, 0]}>
+                {data.map((_, i) => (
+                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -195,6 +239,11 @@ export default function Dashboard() {
 
         {/* KPIs */}
         <KPICards stats={stats} />
+
+        {/* Progress Chart */}
+        {segments && segments.length > 0 && (
+          <SegmentProgressChart segments={segments} />
+        )}
 
         {/* Segment Grid */}
         {segLoading ? (
