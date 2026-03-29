@@ -50,11 +50,18 @@ interface Stats {
 }
 
 const PHASES = [
-  { name: "Foundation", months: "Month 1-2", active: true },
-  { name: "Launch", months: "Month 3-4", active: false },
-  { name: "Scale", months: "Month 5-8", active: false },
-  { name: "Optimize", months: "Month 9-12", active: false },
+  { name: "Foundation", months: "Month 1-2", minProgress: 0, maxProgress: 25 },
+  { name: "Launch", months: "Month 3-4", minProgress: 26, maxProgress: 50 },
+  { name: "Scale", months: "Month 5-8", minProgress: 51, maxProgress: 75 },
+  { name: "Optimize", months: "Month 9-12", minProgress: 76, maxProgress: 100 },
 ];
+
+function getCurrentPhaseIndex(progress: number): number {
+  if (progress <= 25) return 0;
+  if (progress <= 50) return 1;
+  if (progress <= 75) return 2;
+  return 3;
+}
 
 function ProgressRing({ value, size = 40 }: { value: number; size?: number }) {
   const r = (size - 6) / 2;
@@ -298,34 +305,58 @@ export default function Dashboard() {
         )}
 
         {/* Quick Actions */}
-        <Card className="border border-card-border" data-testid="card-quick-actions">
-          <CardContent className="p-5">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-display font-bold">Ready to Launch?</h2>
-                <p className="text-xs text-muted-foreground mt-1">Begin Phase 1 — Foundation to start building your marketing infrastructure.</p>
-              </div>
-              <Button className="shrink-0 gap-2" data-testid="button-start-phase1">
-                <Zap className="w-4 h-4" /> Start Phase 1 <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-
-            {/* Phase Timeline */}
-            <div className="mt-5 pt-4 border-t border-border">
-              <div className="flex items-center gap-1">
-                {PHASES.map((phase, i) => (
-                  <div key={phase.name} className="flex-1" data-testid={`phase-${i + 1}`}>
-                    <div className={`h-1.5 rounded-full ${phase.active ? "bg-primary" : "bg-muted"} transition-colors`} />
-                    <div className="mt-2 px-1">
-                      <p className={`text-[10px] font-bold ${phase.active ? "text-primary" : "text-muted-foreground"}`}>{phase.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{phase.months}</p>
-                    </div>
+        {(() => {
+          const progress = stats?.averageProgress ?? 0;
+          const currentPhaseIdx = getCurrentPhaseIndex(progress);
+          const currentPhase = PHASES[currentPhaseIdx];
+          const nextPhase = currentPhaseIdx < 3 ? PHASES[currentPhaseIdx + 1] : null;
+          return (
+            <Card className="border border-card-border" data-testid="card-quick-actions">
+              <CardContent className="p-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div>
+                    <h2 className="text-sm font-display font-bold">
+                      {progress === 0 ? "Ready to Launch?" : `Currently in Phase ${currentPhaseIdx + 1}`}
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {progress === 0
+                        ? "Begin Phase 1 — Foundation to start building your marketing infrastructure."
+                        : nextPhase
+                          ? `${currentPhase.name} is ${progress}% complete. Next up: ${nextPhase.name} (${nextPhase.months}).`
+                          : `${currentPhase.name} phase — ${progress}% overall progress. Keep optimizing!`}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <Button className="shrink-0 gap-2" data-testid="button-start-phase1">
+                    <Zap className="w-4 h-4" />
+                    {progress === 0 ? "Start Phase 1" : nextPhase ? `Continue ${currentPhase.name}` : "Keep Optimizing"}
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+
+                {/* Phase Timeline */}
+                <div className="mt-5 pt-4 border-t border-border">
+                  <div className="flex items-center gap-1">
+                    {PHASES.map((phase, i) => {
+                      const isActive = i === currentPhaseIdx;
+                      const isCompleted = i < currentPhaseIdx;
+                      return (
+                        <div key={phase.name} className="flex-1" data-testid={`phase-${i + 1}`}>
+                          <div className={`h-1.5 rounded-full transition-colors ${isCompleted ? "bg-emerald-500" : isActive ? "bg-primary" : "bg-muted"}`} />
+                          <div className="mt-2 px-1">
+                            <p className={`text-[10px] font-bold ${isCompleted ? "text-emerald-500" : isActive ? "text-primary" : "text-muted-foreground"}`}>
+                              {isCompleted ? `${phase.name} ✓` : phase.name}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground">{phase.months}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
       </div>
     </div>
   );
