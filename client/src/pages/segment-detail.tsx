@@ -233,39 +233,82 @@ function BestPracticeCard({ bp }: { bp: BestPractice }) {
   );
 }
 
-function AdPlatformTab({ segmentName }: { segmentName: string }) {
-  const platformActions = [
-    { title: "Create Campaign", icon: PlusCircle, desc: "Set up a new campaign with targeting and budget" },
-    { title: "View Performance", icon: BarChart3, desc: "Real-time metrics, ROAS, and conversion data" },
-    { title: "Manage Budget", icon: DollarSign, desc: "Adjust spend, bidding strategy, and pacing" },
-  ];
+const PLATFORM_RESOURCES: Record<string, { label: string; url: string; desc: string }[]> = {
+  strategy: [
+    { label: "Google Ads Help Center", url: "https://support.google.com/google-ads", desc: "Official Google Ads documentation and best practices" },
+    { label: "Meta Business Help Center", url: "https://www.facebook.com/business/help", desc: "Meta advertising guides and troubleshooting" },
+    { label: "HubSpot Marketing Blog", url: "https://blog.hubspot.com/marketing", desc: "Marketing strategy frameworks and templates" },
+  ],
+  operations: [
+    { label: "Google Analytics Academy", url: "https://analytics.google.com/analytics/academy", desc: "Free courses on analytics and measurement" },
+    { label: "Mailchimp Resources", url: "https://mailchimp.com/resources", desc: "Email marketing guides and benchmarks" },
+    { label: "Canva Design School", url: "https://www.canva.com/designschool", desc: "Design fundamentals for marketing teams" },
+  ],
+  intelligence: [
+    { label: "Google Trends", url: "https://trends.google.com", desc: "Explore search trends and market signals" },
+    { label: "Semrush Academy", url: "https://www.semrush.com/academy", desc: "SEO, content marketing, and competitive analysis" },
+    { label: "Think with Google", url: "https://www.thinkwithgoogle.com", desc: "Consumer insights and marketing research" },
+  ],
+};
+
+function AdPlatformTab({ segmentName, modules, category }: { segmentName: string; modules: ModuleWithTasks[]; category: string }) {
+  const resources = PLATFORM_RESOURCES[category] || PLATFORM_RESOURCES.strategy;
 
   return (
-    <div className="space-y-4" data-testid="tab-ad-platform">
-      <Card className="border border-dashed border-primary/40 bg-primary/5">
-        <CardContent className="p-5 text-center">
-          <Plug className="w-8 h-8 text-primary mx-auto mb-3 opacity-60" />
-          <h3 className="text-sm font-display font-bold mb-1">Connect {segmentName}</h3>
-          <p className="text-xs text-muted-foreground mb-3">Link your ad accounts to manage campaigns directly from the command center.</p>
-          <Button variant="outline" size="sm" className="gap-2" data-testid="button-connect-platform">
-            <Link2 className="w-3.5 h-3.5" /> Connect Account
-          </Button>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {platformActions.map(action => (
-          <Card key={action.title} className="border border-card-border opacity-60" data-testid={`card-platform-${action.title.toLowerCase().replace(/\s/g, "-")}`}>
-            <CardContent className="p-4 text-center">
-              <action.icon className="w-6 h-6 text-muted-foreground mx-auto mb-2" />
-              <h4 className="text-sm font-display font-bold mb-1">{action.title}</h4>
-              <p className="text-[11px] text-muted-foreground">{action.desc}</p>
-            </CardContent>
-          </Card>
-        ))}
+    <div className="space-y-5" data-testid="tab-ad-platform">
+      {/* Platform Setup Guide */}
+      <div>
+        <h3 className="text-sm font-display font-bold mb-3 flex items-center gap-2">
+          <Settings className="w-4 h-4 text-primary" /> Platform Setup Guide for {segmentName}
+        </h3>
+        <div className="space-y-2">
+          {modules.map((mod, i) => {
+            const IconComponent = ICON_MAP[mod.icon];
+            const isComplete = mod.progress === 100;
+            return (
+              <Card key={mod.id} className={`border ${isComplete ? "border-emerald-500/30 bg-emerald-500/5" : "border-card-border"}`} data-testid={`setup-step-${mod.slug}`}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isComplete ? "bg-emerald-500 text-white" : "bg-primary/10 text-primary"}`}>
+                      {isComplete ? <CheckSquare className="w-4 h-4" /> : i + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-display font-bold">{mod.name}</h4>
+                        <Badge variant="secondary" className="text-[10px] h-5">{mod.progress}%</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">{mod.description}</p>
+                    </div>
+                    <Progress value={mod.progress} className="w-20 h-1.5 shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
-      <p className="text-[10px] text-muted-foreground text-center italic">Live API integration coming in Phase 2</p>
+      {/* Resources */}
+      <div>
+        <h3 className="text-sm font-display font-bold mb-3 flex items-center gap-2">
+          <BookOpen className="w-4 h-4 text-primary" /> Resources
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {resources.map(r => (
+            <a key={r.url} href={r.url} target="_blank" rel="noopener noreferrer">
+              <Card className="border border-card-border hover:border-primary/30 transition-colors h-full cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <ExternalLink className="w-3.5 h-3.5 text-primary shrink-0" />
+                    <h4 className="text-sm font-display font-bold text-primary">{r.label}</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{r.desc}</p>
+                </CardContent>
+              </Card>
+            </a>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -383,7 +426,7 @@ export default function SegmentDetailPage() {
           </TabsContent>
 
           <TabsContent value="ad-platform" className="mt-4">
-            <AdPlatformTab segmentName={segment.name} />
+            <AdPlatformTab segmentName={segment.name} modules={segment.modules} category={segment.category} />
           </TabsContent>
         </Tabs>
       </div>
