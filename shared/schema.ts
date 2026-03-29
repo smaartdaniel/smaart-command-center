@@ -49,6 +49,16 @@ export const tasks = sqliteTable("tasks", {
   order: integer("order").notNull(),
 });
 
+export const creativeScores = sqliteTable("creative_scores", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  segmentId: text("segment_id").notNull().default("creative-playbook"),
+  scores: text("scores").notNull(),
+  totalScore: integer("total_score").notNull(),
+  createdAt: text("created_at").notNull(),
+});
+
+export const insertCreativeScoreSchema = createInsertSchema(creativeScores).omit({ id: true });
+
 export const insertSegmentSchema = createInsertSchema(segments).omit({ id: true });
 export const insertModuleSchema = createInsertSchema(modules).omit({ id: true });
 export const insertBestPracticeSchema = createInsertSchema(bestPractices).omit({ id: true });
@@ -62,3 +72,5 @@ export type BestPractice = typeof bestPractices.$inferSelect;
 export type InsertBestPractice = z.infer<typeof insertBestPracticeSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type CreativeScore = typeof creativeScores.$inferSelect;
+export type InsertCreativeScore = z.infer<typeof insertCreativeScoreSchema>;

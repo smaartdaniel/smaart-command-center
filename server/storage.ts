@@ -3,6 +3,7 @@ import {
   type Module, type InsertModule, modules,
   type BestPractice, type InsertBestPractice, bestPractices,
   type Task, type InsertTask, tasks,
+  type CreativeScore, type InsertCreativeScore, creativeScores,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -56,6 +57,13 @@ sqlite.exec(`
     owner TEXT,
     "order" INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS creative_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id TEXT NOT NULL DEFAULT 'creative-playbook',
+    scores TEXT NOT NULL,
+    total_score INTEGER NOT NULL,
+    created_at TEXT NOT NULL
+  );
 `);
 
 export const db = drizzle(sqlite);
@@ -92,6 +100,10 @@ export interface IStorage {
     totalTasks: number;
     averageProgress: number;
   };
+
+  // Creative Scores
+  saveCreativeScore(score: InsertCreativeScore): CreativeScore;
+  getLatestCreativeScore(): CreativeScore | undefined;
 
   // Seed
   insertSegment(s: InsertSegment): Segment;
@@ -187,6 +199,14 @@ export class DatabaseStorage implements IStorage {
 
   insertBestPractice(bp: InsertBestPractice): BestPractice {
     return db.insert(bestPractices).values(bp).returning().get();
+  }
+
+  saveCreativeScore(score: InsertCreativeScore): CreativeScore {
+    return db.insert(creativeScores).values(score).returning().get();
+  }
+
+  getLatestCreativeScore(): CreativeScore | undefined {
+    return db.select().from(creativeScores).orderBy(sql`id DESC`).limit(1).get();
   }
 }
 

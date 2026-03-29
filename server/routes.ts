@@ -147,6 +147,25 @@ export async function registerRoutes(
     res.json(updated);
   });
 
+  // POST creative score
+  app.post("/api/creative-scores", (req, res) => {
+    const { scores, totalScore, segmentId } = req.body;
+    const saved = storage.saveCreativeScore({
+      segmentId: segmentId || "creative-playbook",
+      scores: typeof scores === "string" ? scores : JSON.stringify(scores),
+      totalScore,
+      createdAt: new Date().toISOString(),
+    });
+    res.status(201).json(saved);
+  });
+
+  // GET latest creative score
+  app.get("/api/creative-scores/latest", (_req, res) => {
+    const latest = storage.getLatestCreativeScore();
+    if (!latest) return res.json(null);
+    res.json(latest);
+  });
+
   // DELETE task
   app.delete("/api/tasks/:id", (req, res) => {
     const id = parseInt(req.params.id);

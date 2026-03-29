@@ -1,5 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -73,16 +74,44 @@ function CreativeAuditTool() {
   );
   const { toast } = useToast();
 
+  // Load saved scores on mount
+  const { data: savedScore } = useQuery<any>({
+    queryKey: ["/api/creative-scores/latest"],
+  });
+
+  useEffect(() => {
+    if (savedScore && savedScore.scores) {
+      try {
+        const parsed = typeof savedScore.scores === "string" ? JSON.parse(savedScore.scores) : savedScore.scores;
+        setScores(parsed);
+      } catch {}
+    }
+  }, [savedScore]);
+
   const total = Object.values(scores).reduce((a, b) => a + b, 0);
   const maxScore = AUDIT_DIMENSIONS.length * 10;
   const threshold = 60;
   const isReady = total >= threshold;
 
+  const saveScoreMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/api/creative-scores", {
+        scores,
+        totalScore: total,
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/creative-scores/latest"] });
+      toast({
+        title: "Score saved",
+        description: `Audit score ${total}/${maxScore} recorded — ${isReady ? "Ready to Launch" : "Needs Revision"}`,
+      });
+    },
+  });
+
   const handleSaveScore = () => {
-    toast({
-      title: "Score saved",
-      description: `Audit score ${total}/${maxScore} recorded — ${isReady ? "Ready to Launch" : "Needs Revision"}`,
-    });
+    saveScoreMutation.mutate();
   };
 
   return (
