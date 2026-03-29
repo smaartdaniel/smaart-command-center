@@ -3,14 +3,16 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Paintbrush, ArrowLeft, ExternalLink,
   CheckCircle2, AlertTriangle, Grid3x3, LayoutTemplate,
-  Video, ImageIcon, MessageSquare, Tv,
+  Video, ImageIcon, MessageSquare, Tv, Save,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { Segment, Module, BestPractice, Task } from "@shared/schema";
 import { Link } from "wouter";
 
@@ -69,11 +71,19 @@ function CreativeAuditTool() {
   const [scores, setScores] = useState<Record<string, number>>(
     Object.fromEntries(AUDIT_DIMENSIONS.map(d => [d.key, 5]))
   );
+  const { toast } = useToast();
 
   const total = Object.values(scores).reduce((a, b) => a + b, 0);
   const maxScore = AUDIT_DIMENSIONS.length * 10;
   const threshold = 60;
   const isReady = total >= threshold;
+
+  const handleSaveScore = () => {
+    toast({
+      title: "Score saved",
+      description: `Audit score ${total}/${maxScore} recorded — ${isReady ? "Ready to Launch" : "Needs Revision"}`,
+    });
+  };
 
   return (
     <Card className="border border-card-border" data-testid="card-creative-audit">
@@ -122,10 +132,13 @@ function CreativeAuditTool() {
           ))}
         </div>
 
-        <div className="mt-5 pt-4 border-t border-border">
-          <Progress value={(total / maxScore) * 100} className="h-2" />
-          <p className="text-[10px] text-muted-foreground mt-2 text-center">Minimum {threshold}/{maxScore} required for launch approval</p>
+        <div className="mt-5 pt-4 border-t border-border flex items-center gap-3">
+          <Progress value={(total / maxScore) * 100} className="h-2 flex-1" />
+          <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5 shrink-0" onClick={handleSaveScore} data-testid="button-save-audit-score">
+            <Save className="w-3.5 h-3.5" /> Save Score
+          </Button>
         </div>
+        <p className="text-[10px] text-muted-foreground mt-2 text-center">Minimum {threshold}/{maxScore} required for launch approval</p>
       </CardContent>
     </Card>
   );
@@ -133,6 +146,7 @@ function CreativeAuditTool() {
 
 function TestingMatrix() {
   const STATUS_CYCLE = ["Draft", "Testing", "Winner", "Paused"];
+  const { toast } = useToast();
   const [statuses, setStatuses] = useState<Record<string, string>>(
     Object.fromEntries(
       MATRIX_HEADLINES.flatMap((h, hi) =>
@@ -145,6 +159,8 @@ function TestingMatrix() {
     setStatuses(s => {
       const curr = STATUS_CYCLE.indexOf(s[key]);
       const next = STATUS_CYCLE[(curr + 1) % STATUS_CYCLE.length];
+      const [hi, vi] = key.split("-").map(Number);
+      toast({ title: `Cell ${String.fromCharCode(65 + hi)}${vi + 1} → ${next}` });
       return { ...s, [key]: next };
     });
   };

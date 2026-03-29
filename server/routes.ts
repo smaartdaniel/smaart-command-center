@@ -51,6 +51,30 @@ function seedDatabase() {
   }
 }
 
+function recalculateProgress(segmentId: number) {
+  const mods = storage.getModulesBySegment(segmentId);
+  const avgProgress = mods.length > 0
+    ? Math.round(mods.reduce((acc, m) => acc + m.progress, 0) / mods.length)
+    : 0;
+  storage.updateSegment(segmentId, { progress: avgProgress });
+}
+
+function recalculateModuleProgress(moduleId: number) {
+  const moduleTasks = storage.getTasksByModule(moduleId);
+  if (moduleTasks.length === 0) {
+    const mod = storage.updateModule(moduleId, { progress: 0, status: "not_started" });
+    if (mod) recalculateProgress(mod.segmentId);
+    return;
+  }
+  const completed = moduleTasks.filter(t => t.status === "completed").length;
+  const progress = Math.round((completed / moduleTasks.length) * 100);
+  const status = progress === 100 ? "active" : progress > 0 ? "in_progress" : "not_started";
+  const mod = storage.updateModule(moduleId, { progress, status });
+  if (mod) {
+    recalculateProgress(mod.segmentId);
+  }
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -98,6 +122,7 @@ export async function registerRoutes(
     const id = parseInt(req.params.id);
     const updated = storage.updateModule(id, req.body);
     if (!updated) return res.status(404).json({ error: "Module not found" });
+    recalculateProgress(updated.segmentId);
     res.json(updated);
   });
 
@@ -109,6 +134,7 @@ export async function registerRoutes(
   // POST task
   app.post("/api/tasks", (req, res) => {
     const task = storage.createTask(req.body);
+    recalculateModuleProgress(task.moduleId);
     res.status(201).json(task);
   });
 
@@ -117,7 +143,17 @@ export async function registerRoutes(
     const id = parseInt(req.params.id);
     const updated = storage.updateTask(id, req.body);
     if (!updated) return res.status(404).json({ error: "Task not found" });
+    recalculateModuleProgress(updated.moduleId);
     res.json(updated);
+  });
+
+  // DELETE task
+  app.delete("/api/tasks/:id", (req, res) => {
+    const id = parseInt(req.params.id);
+    const deleted = storage.deleteTask(id);
+    if (!deleted) return res.status(404).json({ error: "Task not found" });
+    recalculateModuleProgress(deleted.moduleId);
+    res.json({ success: true });
   });
 
   return httpServer;

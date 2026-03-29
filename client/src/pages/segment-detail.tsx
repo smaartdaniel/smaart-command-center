@@ -20,10 +20,10 @@ import {
   Gauge, Workflow, Bell, ClipboardCheck, Grid3x3, LayoutTemplate,
   Calendar, Quote, MessageCircle, Rocket, Share2, FileUp, Bot,
   Sparkles, Droplets, RotateCcw, ListChecks, FlaskConical,
-  ArrowLeft, CheckSquare, Square,
+  ArrowLeft, CheckSquare, Square, X,
 } from "lucide-react";
 import type { Segment, Module, BestPractice, Task } from "@shared/schema";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Link as WouterLink } from "wouter";
 
@@ -63,15 +63,24 @@ type SegmentDetail = Segment & { modules: ModuleWithTasks[]; bestPractices: Best
 
 function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: number }) {
   const [open, setOpen] = useState(false);
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const IconComponent = ICON_MAP[mod.icon];
 
+  useEffect(() => {
+    if (addingTask && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [addingTask]);
+
   const addTaskMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (title: string) => {
       const res = await apiRequest("POST", "/api/tasks", {
         moduleId: mod.id,
         segmentId,
-        title: "New task",
+        title,
         status: "pending",
         priority: "medium",
         order: (mod.tasks?.length || 0) + 1,
@@ -80,6 +89,9 @@ function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: numbe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/segments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      setNewTaskTitle("");
+      setAddingTask(false);
       toast({ title: "Task created" });
     },
   });
@@ -92,8 +104,27 @@ function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: numbe
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/segments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
     },
   });
+
+  const deleteTaskMutation = useMutation({
+    mutationFn: async (taskId: number) => {
+      const res = await apiRequest("DELETE", `/api/tasks/${taskId}`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/segments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/stats"] });
+      toast({ title: "Task deleted" });
+    },
+  });
+
+  const handleAddTask = () => {
+    const title = newTaskTitle.trim();
+    if (!title) return;
+    addTaskMutation.mutate(title);
+  };
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
@@ -134,14 +165,45 @@ function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: numbe
                       <Square className="w-4 h-4" />
                     )}
                   </button>
-                  <span className={`text-sm ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
+                  <span className={`text-sm flex-1 ${task.status === "completed" ? "line-through text-muted-foreground" : ""}`}>{task.title}</span>
+                  <button
+                    onClick={() => deleteTaskMutation.mutate(task.id)}
+                    className="shrink-0 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all"
+                    data-testid={`button-delete-task-${task.id}`}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )) : (
                 <p className="text-xs text-muted-foreground italic">No tasks yet</p>
               )}
-              <Button variant="ghost" size="sm" className="text-xs h-7 gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => addTaskMutation.mutate()} data-testid={`button-add-task-${mod.slug}`}>
-                <PlusCircle className="w-3.5 h-3.5" /> Add task
-              </Button>
+              {addingTask ? (
+                <div className="flex items-center gap-2" data-testid={`input-new-task-${mod.slug}`}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={newTaskTitle}
+                    onChange={(e) => setNewTaskTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleAddTask();
+                      if (e.key === "Escape") { setAddingTask(false); setNewTaskTitle(""); }
+                    }}
+                    placeholder="Task name..."
+                    className="flex-1 text-sm bg-transparent border-b border-primary/40 outline-none py-1 placeholder:text-muted-foreground/50"
+                    data-testid={`input-task-title-${mod.slug}`}
+                  />
+                  <Button variant="ghost" size="sm" className="text-xs h-7 px-2" onClick={handleAddTask} disabled={!newTaskTitle.trim()} data-testid={`button-save-task-${mod.slug}`}>
+                    Save
+                  </Button>
+                  <Button variant="ghost" size="sm" className="text-xs h-7 px-2 text-muted-foreground" onClick={() => { setAddingTask(false); setNewTaskTitle(""); }} data-testid={`button-cancel-task-${mod.slug}`}>
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button variant="ghost" size="sm" className="text-xs h-7 gap-1.5 text-muted-foreground hover:text-foreground" onClick={() => { setAddingTask(true); setOpen(true); }} data-testid={`button-add-task-${mod.slug}`}>
+                  <PlusCircle className="w-3.5 h-3.5" /> Add task
+                </Button>
+              )}
             </div>
           </div>
         </CollapsibleContent>

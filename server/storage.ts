@@ -33,6 +33,7 @@ export interface IStorage {
   getTasksBySegment(segmentId: number): Task[];
   createTask(task: InsertTask): Task;
   updateTask(id: number, data: Partial<InsertTask>): Task | undefined;
+  deleteTask(id: number): Task | undefined;
   getAllTasks(): Task[];
 
   // Stats
@@ -102,6 +103,10 @@ export class DatabaseStorage implements IStorage {
 
   updateTask(id: number, data: Partial<InsertTask>): Task | undefined {
     return db.update(tasks).set(data).where(eq(tasks.id, id)).returning().get();
+  }
+
+  deleteTask(id: number): Task | undefined {
+    return db.delete(tasks).where(eq(tasks.id, id)).returning().get();
   }
 
   getStats() {
