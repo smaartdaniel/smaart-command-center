@@ -20,7 +20,7 @@ import {
   Gauge, Workflow, Bell, ClipboardCheck, Grid3x3, LayoutTemplate,
   Calendar, Quote, MessageCircle, Rocket, Share2, FileUp, Bot,
   Sparkles, Droplets, RotateCcw, ListChecks, FlaskConical,
-  ArrowLeft, CheckSquare, Square, X,
+  ArrowLeft, CheckSquare, Square, X, Info,
 } from "lucide-react";
 import type { Segment, Module, BestPractice, Task, SegmentTool } from "@shared/schema";
 import { useState, useRef, useEffect, useMemo } from "react";
@@ -62,6 +62,12 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 type ModuleWithTasks = Module & { tasks: Task[]; guide?: string | null; defaultTasks?: string | null };
 
+interface BudgetRule {
+  rule: string;
+  detail: string;
+  source: string;
+}
+
 interface BudgetConfig {
   minMonthly: number;
   recommendedMonthly: number;
@@ -71,6 +77,7 @@ interface BudgetConfig {
   avgCPM: number;
   conversionRate: number;
   platformFee: number;
+  rules?: BudgetRule[];
 }
 
 type SegmentDetail = Segment & {
@@ -599,6 +606,27 @@ function BudgetCalculatorTab({ config, segmentName }: { config: BudgetConfig; se
           </div>
         </CardContent>
       </Card>
+
+      {/* Budget Rules */}
+      {config.rules && config.rules.length > 0 && (
+        <Card className="border border-blue-200 bg-blue-50/50 dark:border-blue-900 dark:bg-blue-950/30">
+          <CardContent className="p-5">
+            <h4 className="text-sm font-display font-bold mb-3 flex items-center gap-2">
+              <Info className="w-4 h-4 text-blue-500" />
+              Why this budget range?
+            </h4>
+            <div className="space-y-3">
+              {config.rules.map((r, i) => (
+                <div key={i} className="border-b border-blue-200/50 dark:border-blue-800/50 pb-3 last:border-0 last:pb-0">
+                  <p className="text-sm font-semibold text-foreground">{r.rule}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{r.detail}</p>
+                  <p className="text-[10px] text-blue-500 dark:text-blue-400 mt-1 italic">Source: {r.source}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Metric Cards */}
       {isMediaSegment && (

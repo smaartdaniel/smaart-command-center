@@ -9,6 +9,12 @@ export interface ToolSeed {
   campaigns: string[];
 }
 
+export interface BudgetRule {
+  rule: string;
+  detail: string;
+  source: string;
+}
+
 export interface BudgetConfigSeed {
   minMonthly: number;
   recommendedMonthly: number;
@@ -18,6 +24,7 @@ export interface BudgetConfigSeed {
   avgCPM: number;
   conversionRate: number;
   platformFee: number;
+  rules: BudgetRule[];
 }
 
 export const SEGMENT_TOOLS: Record<string, ToolSeed[]> = {
@@ -140,6 +147,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 12,
     conversionRate: 0.035,
     platformFee: 297,
+    rules: [
+      {
+        rule: "Core Tools Are Free",
+        detail: "Google Tag Manager and GA4 are completely free. The $500 minimum covers your consent management platform (OneTrust/Cookiebot at $0-200/mo) and GoHighLevel CRM ($297/mo) which are essential for compliant data collection.",
+        source: "Google / OneTrust Pricing"
+      },
+      {
+        rule: "CRM Is the Cost Driver",
+        detail: "GoHighLevel at $297/mo is the single biggest line item. It replaces 5-6 separate tools (CRM, email, SMS, pipeline, forms) so it's cost-efficient, but it sets your floor.",
+        source: "GoHighLevel Pricing Page"
+      },
+      {
+        rule: "Segment CDP for Scale",
+        detail: "If you're routing data to 3+ downstream tools, Segment CDP ($120/mo) pays for itself in engineering time saved. Below 3 integrations, GTM alone is sufficient.",
+        source: "Segment Documentation"
+      },
+    ],
   },
   "cross-device": {
     minMonthly: 1000,
@@ -150,6 +174,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 15,
     conversionRate: 0.03,
     platformFee: 500,
+    rules: [
+      {
+        rule: "Meta Custom Audience Minimum",
+        detail: "Meta requires a minimum audience size of 1,000 matched users to serve Custom Audience ads. With typical 40-60% match rates, you need at least 2,000 CRM contacts to even start.",
+        source: "Meta Business Help Center"
+      },
+      {
+        rule: "Daily Spend for Delivery",
+        detail: "Cross-device campaigns on Meta need $30+/day per ad set to exit the learning phase and get consistent delivery. At $1,000/mo that's only one ad set running.",
+        source: "Meta Ads Best Practices"
+      },
+      {
+        rule: "Identity Resolution Costs",
+        detail: "LiveRamp identity resolution starts at ~$1,000/mo for onboarding CRM data to digital identities. This is a fixed cost that makes low budgets inefficient.",
+        source: "LiveRamp Sales Team"
+      },
+    ],
   },
   "geofencing": {
     minMonthly: 2000,
@@ -160,6 +201,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 18,
     conversionRate: 0.025,
     platformFee: 750,
+    rules: [
+      {
+        rule: "Platform Minimum",
+        detail: "Simpli.fi requires a minimum $3,000/month contract. GroundTruth starts at $5,000/month. $2,000 is the absolute minimum using self-serve options.",
+        source: "Simpli.fi Sales Team"
+      },
+      {
+        rule: "Impression Volume",
+        detail: "Geofencing needs 50,000+ monthly impressions per zone to generate meaningful foot traffic data. At $8-12 CPM, that requires $400-600 per zone minimum.",
+        source: "Industry Benchmark"
+      },
+      {
+        rule: "Optimization Window",
+        detail: "Location-based campaigns need 2-3 weeks of data before the algorithm can optimize delivery. Underfunding cuts this learning period short.",
+        source: "GroundTruth Best Practices"
+      },
+    ],
   },
   "programmatic": {
     minMonthly: 3000,
@@ -170,6 +228,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 8,
     conversionRate: 0.02,
     platformFee: 500,
+    rules: [
+      {
+        rule: "DSP Seat Fees",
+        detail: "Enterprise DSPs like The Trade Desk charge platform/seat fees of $500-1,500/mo on top of media spend. DV360 has a 10-15% platform fee on all spend.",
+        source: "The Trade Desk / DV360 Pricing"
+      },
+      {
+        rule: "Minimum RTB Bids",
+        detail: "Real-time bidding for insurance/financial services audiences commands $6-15 CPM floor prices. Brand safety verification tools (IAS, DoubleVerify) add $0.03-0.10 per impression.",
+        source: "eMarketer Programmatic Benchmarks"
+      },
+      {
+        rule: "Frequency & Reach Balance",
+        detail: "Effective programmatic campaigns need 5-7 frequency per user per month. At $8 CPM, reaching 50,000 unique users at that frequency costs ~$2,800 in media alone.",
+        source: "IAB Digital Advertising Guide"
+      },
+    ],
   },
   "ctv-audio": {
     minMonthly: 2500,
@@ -180,6 +255,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 25,
     conversionRate: 0.015,
     platformFee: 250,
+    rules: [
+      {
+        rule: "Premium Inventory CPMs",
+        detail: "CTV ad inventory on Hulu, Roku, and premium streaming services runs $25-40 CPM. Non-skippable 30-second spots on Hulu start at $30 CPM for self-serve.",
+        source: "Hulu / Roku Ad Manager Pricing"
+      },
+      {
+        rule: "Minimum Campaign Buys",
+        detail: "Roku requires a $500 minimum per campaign. Hulu self-serve starts at $500. SiriusXM/Pandora managed campaigns start at $5,000. Even Spotify's minimum is $250.",
+        source: "Platform Self-Serve Dashboards"
+      },
+      {
+        rule: "Completion Rate Economics",
+        detail: "CTV ads have 95%+ completion rates but high CPMs mean you need volume to drive measurable results. At $30 CPM you get ~83,000 completed views per $2,500 spend.",
+        source: "IAB Video Advertising Report"
+      },
+    ],
   },
   "meta-ads": {
     minMonthly: 1500,
@@ -190,6 +282,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 10,
     conversionRate: 0.04,
     platformFee: 49,
+    rules: [
+      {
+        rule: "Learning Phase Minimum",
+        detail: "Meta's algorithm needs ~$50/day per ad set to exit the learning phase. At $1,500/mo you can only run one ad set effectively. $5,000/mo unlocks 3 ad sets for proper testing.",
+        source: "Meta Business Help Center"
+      },
+      {
+        rule: "Conversion Volume",
+        detail: "Meta recommends 50 conversions per ad set per week for stable optimization. For insurance leads at $30-40 CPL, that means $1,500-2,000/week per ad set.",
+        source: "Meta Ads Delivery System Documentation"
+      },
+      {
+        rule: "Insurance Vertical CPMs",
+        detail: "Financial services and insurance CPMs on Meta average $10-18, significantly higher than retail ($6-8). This is driven by competition from carriers and large agencies.",
+        source: "WordStream Industry Benchmarks"
+      },
+    ],
   },
   "google-ads": {
     minMonthly: 2000,
@@ -200,6 +309,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 35,
     conversionRate: 0.05,
     platformFee: 208,
+    rules: [
+      {
+        rule: "Insurance CPC Rates",
+        detail: "Insurance keywords average $5-15 CPC on Google Search. 'Auto insurance quotes' runs $8-12, 'business insurance' $10-18. At $2,000/mo you get roughly 150-400 clicks.",
+        source: "Google Keyword Planner / SpyFu Data"
+      },
+      {
+        rule: "Smart Bidding Data Needs",
+        detail: "Google's Smart Bidding (Target CPA, Maximize Conversions) requires 30-50 conversions in 30 days to optimize effectively. At 5% conversion rate, that's 600-1,000 clicks needed monthly.",
+        source: "Google Ads Help Center"
+      },
+      {
+        rule: "Daily Budget for Delivery",
+        detail: "Google recommends at least 10x your target CPC as daily budget for consistent ad delivery. With insurance CPCs at $8-15, you need $80-150/day minimum — roughly $2,400-4,500/mo.",
+        source: "Google Ads Best Practices"
+      },
+    ],
   },
   "content-contextual": {
     minMonthly: 1000,
@@ -210,6 +336,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 6,
     conversionRate: 0.02,
     platformFee: 129,
+    rules: [
+      {
+        rule: "Platform Minimums",
+        detail: "Taboola requires a minimum $10/day (~$300/mo). Outbrain's minimum campaign budget is $20/day (~$600/mo). Running both platforms sets a floor around $900/mo in ad spend alone.",
+        source: "Taboola / Outbrain Self-Serve Dashboards"
+      },
+      {
+        rule: "Native Ad CPC Range",
+        detail: "Native advertising CPCs for financial services content run $0.50-1.50 on Taboola/Outbrain. At $1,000/mo you'll generate 700-2,000 article reads — enough to test but not scale.",
+        source: "Taboola Industry Benchmarks"
+      },
+      {
+        rule: "Content Production Costs",
+        detail: "Effective native advertising requires a steady pipeline of quality articles and landing pages. SEMrush Content Marketing ($129/mo) or equivalent tools are needed for competitive content strategy.",
+        source: "Content Marketing Institute"
+      },
+    ],
   },
   "referral": {
     minMonthly: 500,
@@ -220,6 +363,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 8,
     conversionRate: 0.08,
     platformFee: 59,
+    rules: [
+      {
+        rule: "Reward Cost Per Referral",
+        detail: "Effective insurance referral programs offer $25-100 per successful referral. At $50 average reward and 20 referrals/month, that's $1,000/mo in reward costs alone.",
+        source: "Insurance Industry Referral Programs"
+      },
+      {
+        rule: "Platform Subscription",
+        detail: "ReferralCandy starts at $59/mo, Rewardful at $49/mo. These platforms automate tracking, reward distribution, and prevent fraud — manual tracking breaks at scale.",
+        source: "ReferralCandy / Rewardful Pricing"
+      },
+      {
+        rule: "Highest ROI Channel",
+        detail: "Referred customers have 4x higher conversion rates and 16% higher lifetime value than other channels. The $500 minimum makes this the most cost-efficient segment to fund.",
+        source: "Wharton School of Business Research"
+      },
+    ],
   },
   "x-ads": {
     minMonthly: 1000,
@@ -230,6 +390,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 12,
     conversionRate: 0.025,
     platformFee: 112,
+    rules: [
+      {
+        rule: "Promoted Post Minimums",
+        detail: "X Ads has no hard minimum, but promoted posts need $20-50/day to reach meaningful audiences. Below $1,000/mo, impression volume is too low for B2B insurance targeting.",
+        source: "X Ads Manager"
+      },
+      {
+        rule: "Lower CPMs, Need Volume",
+        detail: "X CPMs ($8-15) are lower than Meta or LinkedIn, but engagement rates for insurance content are also lower (0.5-1.5%). You need high volume to compensate.",
+        source: "Hootsuite Social Advertising Report"
+      },
+      {
+        rule: "Audience Research Tools",
+        detail: "SparkToro ($50/mo) is essential for finding the right X audiences to target. Without audience intelligence, X ad spend is largely wasted on broad targeting.",
+        source: "SparkToro Pricing"
+      },
+    ],
   },
   "email": {
     minMonthly: 300,
@@ -240,6 +417,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 3,
     conversionRate: 0.06,
     platformFee: 297,
+    rules: [
+      {
+        rule: "GoHighLevel Plan Cost",
+        detail: "GoHighLevel at $297/mo is SMAART's primary email engine and already covers CRM, SMS, and automation. This is a fixed cost regardless of email volume.",
+        source: "GoHighLevel Pricing"
+      },
+      {
+        rule: "SendGrid Pricing Tiers",
+        detail: "SendGrid's free tier covers 100 emails/day. The Essentials plan ($19.95/mo) supports 50,000 emails/month. Pro plan ($89.95/mo) adds dedicated IP and advanced analytics at 100,000 emails.",
+        source: "SendGrid Pricing Page"
+      },
+      {
+        rule: "Deliverability Investment",
+        detail: "Email testing tools like Litmus ($99/mo) and inbox warming services prevent your domain from getting flagged. Skipping these saves $100/mo but can tank deliverability permanently.",
+        source: "Litmus Email Deliverability Guide"
+      },
+    ],
   },
   "tracking": {
     minMonthly: 200,
@@ -250,6 +444,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 0,
     conversionRate: 0,
     platformFee: 400,
+    rules: [
+      {
+        rule: "Free Core Stack",
+        detail: "Google Tag Manager and GA4 are completely free and cover 80% of tracking needs. The $200 minimum accounts for call tracking (CallRail $45/mo) and basic behavior analytics.",
+        source: "Google / CallRail Pricing"
+      },
+      {
+        rule: "Behavior Analytics Add-Ons",
+        detail: "Hotjar ($39/mo) or FullStory ($199/mo) provide heatmaps and session recordings that reveal why users drop off. These are optional but high-value for conversion optimization.",
+        source: "Hotjar / FullStory Pricing Pages"
+      },
+      {
+        rule: "Call Tracking Is Essential for Insurance",
+        detail: "40-60% of insurance conversions happen by phone. Without CallRail ($45/mo) or similar, you're blind to which campaigns drive phone leads.",
+        source: "Insurance Marketing Association"
+      },
+    ],
   },
   "analytics": {
     minMonthly: 200,
@@ -260,6 +471,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 0,
     conversionRate: 0,
     platformFee: 250,
+    rules: [
+      {
+        rule: "Free Core Dashboards",
+        detail: "GA4 and Looker Studio are completely free and cover basic reporting. The $200 minimum covers Supermetrics ($39/mo) for pulling data from multiple ad platforms into one dashboard.",
+        source: "Google / Supermetrics Pricing"
+      },
+      {
+        rule: "Supermetrics Connector Costs",
+        detail: "Supermetrics charges $39/mo for 3 data sources. Each additional source is ~$15/mo. If you're running 6+ ad platforms, expect $70-100/mo for data connectors alone.",
+        source: "Supermetrics Pricing Page"
+      },
+      {
+        rule: "Advanced Attribution Tools",
+        detail: "Triple Whale ($129/mo) or Databox ($72/mo) provide multi-touch attribution and real-time KPI dashboards. These are worth it once you're spending $5,000+/mo across channels.",
+        source: "Triple Whale / Databox Pricing"
+      },
+    ],
   },
   "creative-playbook": {
     minMonthly: 500,
@@ -270,6 +498,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 0,
     conversionRate: 0,
     platformFee: 150,
+    rules: [
+      {
+        rule: "Design Tool Subscriptions",
+        detail: "Canva Pro ($13/mo per user), Figma ($15/mo), and CapCut Pro ($8/mo) form the creative toolkit. At 2-3 team members, design tools run $70-110/mo.",
+        source: "Canva / Figma / CapCut Pricing"
+      },
+      {
+        rule: "Stock Asset Costs",
+        detail: "Quality stock photos and video clips for insurance ads cost $10-50 per asset. Budget $100-300/mo for stock libraries (Shutterstock, iStock) unless you're shooting original content.",
+        source: "Shutterstock Pricing"
+      },
+      {
+        rule: "Creative Refresh Cadence",
+        detail: "Ad creative fatigues every 2-4 weeks on social platforms. You need 10-15 new ad variations per month to maintain performance, which drives consistent production costs.",
+        source: "Meta Creative Best Practices"
+      },
+    ],
   },
   "positioning": {
     minMonthly: 500,
@@ -280,6 +525,23 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 0,
     conversionRate: 0,
     platformFee: 330,
+    rules: [
+      {
+        rule: "Research Tool Subscriptions",
+        detail: "SEMrush ($129/mo), SparkToro ($50/mo), and SimilarWeb ($149/mo) are the core competitive intelligence stack. At minimum, SEMrush alone provides keyword, PPC, and content gap analysis.",
+        source: "SEMrush / SparkToro / SimilarWeb Pricing"
+      },
+      {
+        rule: "Social Listening Costs",
+        detail: "Brandwatch and enterprise social listening tools start at $800+/mo. For SMAART's scale, SparkToro ($50/mo) plus manual monitoring covers 80% of positioning intelligence needs.",
+        source: "Brandwatch / SparkToro Pricing"
+      },
+      {
+        rule: "Quarterly Research Cadence",
+        detail: "Competitive positioning should be refreshed quarterly. The monthly subscription covers continuous monitoring, but the real value is in the quarterly deep-dive reports that guide strategy pivots.",
+        source: "McKinsey Brand Strategy Framework"
+      },
+    ],
   },
   "client-app": {
     minMonthly: 300,
@@ -290,5 +552,22 @@ export const SEGMENT_BUDGET_CONFIGS: Record<string, BudgetConfigSeed> = {
     avgCPM: 0,
     conversionRate: 0,
     platformFee: 350,
+    rules: [
+      {
+        rule: "Portal Platform Subscription",
+        detail: "GoHighLevel ($297/mo, already in use) can serve as a basic client portal. Dedicated portals like Moxo ($100/mo) or Copilot ($39/mo) provide a more polished client experience.",
+        source: "GoHighLevel / Moxo / Copilot Pricing"
+      },
+      {
+        rule: "White-Label Costs",
+        detail: "White-labeling a client portal with SMAART branding, custom domain, and branded emails typically adds $50-150/mo on top of the base platform subscription.",
+        source: "GoHighLevel SaaS Mode Documentation"
+      },
+      {
+        rule: "Client Retention ROI",
+        detail: "A professional client portal increases retention by 15-25% in professional services. At $5,000 average client value, retaining even one extra client per quarter pays for the entire portal stack.",
+        source: "Bain & Company Customer Loyalty Research"
+      },
+    ],
   },
 };
