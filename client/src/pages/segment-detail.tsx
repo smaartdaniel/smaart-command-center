@@ -22,10 +22,12 @@ import {
   Sparkles, Droplets, RotateCcw, ListChecks, FlaskConical,
   ArrowLeft, CheckSquare, Square, X,
 } from "lucide-react";
-import type { Segment, Module, BestPractice, Task } from "@shared/schema";
-import { useState, useRef, useEffect } from "react";
+import type { Segment, Module, BestPractice, Task, SegmentTool } from "@shared/schema";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { Link as WouterLink } from "wouter";
+import { Slider } from "@/components/ui/slider";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const ICON_MAP: Record<string, any> = {
   Database, Smartphone, MapPin, Layout, Tv, Search, BookOpen, Handshake,
@@ -59,7 +61,24 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 type ModuleWithTasks = Module & { tasks: Task[]; guide?: string | null; defaultTasks?: string | null };
-type SegmentDetail = Segment & { modules: ModuleWithTasks[]; bestPractices: BestPractice[] };
+
+interface BudgetConfig {
+  minMonthly: number;
+  recommendedMonthly: number;
+  maxMonthly: number;
+  avgCPL: number;
+  avgCPC: number;
+  avgCPM: number;
+  conversionRate: number;
+  platformFee: number;
+}
+
+type SegmentDetail = Segment & {
+  modules: ModuleWithTasks[];
+  bestPractices: BestPractice[];
+  tools: SegmentTool[];
+  budgetConfig: BudgetConfig | null;
+};
 
 function renderGuide(guide: string): React.ReactNode {
   const lines = guide.split('\n');
@@ -412,6 +431,297 @@ function AdPlatformTab({ segmentName, modules, category }: { segmentName: string
   );
 }
 
+const TOOL_TYPE_COLORS: Record<string, string> = {
+  platform: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  api: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  tool: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  analytics: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+};
+
+const TOOL_TYPE_LABELS: Record<string, string> = {
+  platform: "Platforms",
+  api: "APIs",
+  tool: "Tools",
+  analytics: "Analytics",
+};
+
+function ToolsTab({ tools }: { tools: SegmentTool[] }) {
+  const grouped = useMemo(() => {
+    const groups: Record<string, SegmentTool[]> = {};
+    for (const tool of tools) {
+      if (!groups[tool.type]) groups[tool.type] = [];
+      groups[tool.type].push(tool);
+    }
+    return groups;
+  }, [tools]);
+
+  const typeOrder = ["platform", "api", "tool", "analytics"];
+
+  if (tools.length === 0) {
+    return (
+      <Card className="border border-card-border">
+        <CardContent className="p-6 text-center">
+          <Plug className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+          <p className="text-sm text-muted-foreground">No tools documented yet for this segment.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6" data-testid="tab-tools">
+      {typeOrder.filter(t => grouped[t]).map(type => (
+        <div key={type}>
+          <h3 className="text-sm font-display font-bold mb-3 flex items-center gap-2">
+            <Badge variant="outline" className={`text-[10px] border ${TOOL_TYPE_COLORS[type]}`}>
+              {TOOL_TYPE_LABELS[type]}
+            </Badge>
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {grouped[type].map(tool => {
+              const campaigns: string[] = (() => {
+                try { return JSON.parse(tool.campaigns); } catch { return []; }
+              })();
+              return (
+                <a key={tool.id} href={tool.url} target="_blank" rel="noopener noreferrer" className="block">
+                  <Card className="border border-card-border hover:border-primary/30 transition-colors h-full cursor-pointer" data-testid={`tool-card-${tool.id}`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <ExternalLink className="w-3.5 h-3.5 text-primary shrink-0" />
+                          <h4 className="text-sm font-display font-bold text-primary truncate">{tool.name}</h4>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px] h-5 shrink-0">{tool.pricing}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed mb-3">{tool.description}</p>
+                      <div className="flex flex-wrap gap-1">
+                        {campaigns.map((c, i) => (
+                          <Badge key={i} variant="outline" className="text-[9px] h-4 border-border/50">{c}</Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function BudgetCalculatorTab({ config, segmentName }: { config: BudgetConfig; segmentName: string }) {
+  const [budget, setBudget] = useState(config.recommendedMonthly);
+  const isMediaSegment = config.avgCPM > 0 && config.conversionRate > 0;
+  const avgClientValue = 5000;
+
+  const projections = useMemo(() => {
+    if (!isMediaSegment) {
+      return {
+        impressions: 0,
+        clicks: 0,
+        leads: 0,
+        costPerLead: 0,
+        platformFee: config.platformFee,
+        totalInvestment: budget + config.platformFee,
+        projectedRevenue: 0,
+        roi: 0,
+      };
+    }
+    const adSpend = budget;
+    const impressions = Math.round((adSpend / config.avgCPM) * 1000);
+    const clicks = Math.round(adSpend / config.avgCPC);
+    const leads = Math.round(clicks * config.conversionRate);
+    const costPerLead = leads > 0 ? Math.round(adSpend / leads) : 0;
+    const totalInvestment = adSpend + config.platformFee;
+    const projectedRevenue = leads * avgClientValue;
+    const roi = totalInvestment > 0 ? Math.round(((projectedRevenue - totalInvestment) / totalInvestment) * 100) : 0;
+
+    return { impressions, clicks, leads, costPerLead, platformFee: config.platformFee, totalInvestment, projectedRevenue, roi };
+  }, [budget, config, isMediaSegment]);
+
+  const chartData = useMemo(() => {
+    if (isMediaSegment) {
+      return [
+        { name: "Ad Spend", value: budget, fill: "hsl(var(--primary))" },
+        { name: "Platform Fee", value: config.platformFee, fill: "hsl(var(--muted-foreground))" },
+      ];
+    }
+    return [
+      { name: "Tools & Platforms", value: config.platformFee, fill: "hsl(var(--primary))" },
+      { name: "Implementation", value: Math.round(budget * 0.6), fill: "hsl(var(--muted-foreground))" },
+      { name: "Optimization", value: Math.round(budget * 0.4), fill: "hsl(217 91% 60%)" },
+    ];
+  }, [budget, config, isMediaSegment]);
+
+  const budgetTier = budget <= config.minMonthly + (config.recommendedMonthly - config.minMonthly) * 0.3
+    ? "starter"
+    : budget <= config.recommendedMonthly + (config.maxMonthly - config.recommendedMonthly) * 0.3
+    ? "growth"
+    : "aggressive";
+
+  const campaignTiers: Record<string, string[]> = {
+    starter: ["Brand Awareness", "Basic Retargeting"],
+    growth: ["Brand Awareness", "Retargeting", "Lead Generation", "A/B Testing"],
+    aggressive: ["Brand Awareness", "Retargeting", "Lead Generation", "A/B Testing", "Competitor Conquesting", "Lookalike Expansion"],
+  };
+
+  const fmt = (n: number) => n >= 1000000 ? `${(n / 1000000).toFixed(1)}M` : n >= 1000 ? `${(n / 1000).toFixed(1)}K` : n.toString();
+  const fmtDollar = (n: number) => `$${n.toLocaleString()}`;
+
+  return (
+    <div className="space-y-6" data-testid="tab-budget">
+      {/* Budget Slider */}
+      <Card className="border border-card-border">
+        <CardContent className="p-5">
+          <h3 className="text-sm font-display font-bold mb-1">Monthly Budget for {segmentName}</h3>
+          <p className="text-xs text-muted-foreground mb-4">Drag to adjust your monthly ad spend and see projected results.</p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>{fmtDollar(config.minMonthly)}</span>
+              <span className="text-lg font-display font-bold text-foreground">{fmtDollar(budget)}<span className="text-xs text-muted-foreground font-normal">/mo</span></span>
+              <span>{fmtDollar(config.maxMonthly)}</span>
+            </div>
+            <Slider
+              value={[budget]}
+              onValueChange={(v) => setBudget(v[0])}
+              min={config.minMonthly}
+              max={config.maxMonthly}
+              step={Math.round((config.maxMonthly - config.minMonthly) / 100) || 50}
+              className="w-full"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground">
+              <span>Minimum</span>
+              <span className="text-primary font-semibold">Recommended: {fmtDollar(config.recommendedMonthly)}</span>
+              <span>Aggressive</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Metric Cards */}
+      {isMediaSegment && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Card className="border border-card-border">
+            <CardContent className="p-4 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Impressions</p>
+              <p className="text-xl font-display font-bold">{fmt(projections.impressions)}</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-card-border">
+            <CardContent className="p-4 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Clicks</p>
+              <p className="text-xl font-display font-bold">{fmt(projections.clicks)}</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-card-border">
+            <CardContent className="p-4 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Est. Leads</p>
+              <p className="text-xl font-display font-bold">{projections.leads}</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-card-border">
+            <CardContent className="p-4 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Cost / Lead</p>
+              <p className="text-xl font-display font-bold">{fmtDollar(projections.costPerLead)}</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Chart + Campaigns side by side */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Budget Breakdown Chart */}
+        <Card className="border border-card-border">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-display font-bold mb-3">Budget Breakdown</h4>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                  <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} tickFormatter={(v) => `$${v >= 1000 ? `${v / 1000}k` : v}`} />
+                  <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, '']} contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px", fontSize: 12 }} />
+                  <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                    {chartData.map((entry, i) => (
+                      <Cell key={i} fill={entry.fill} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Campaign Types */}
+        <Card className="border border-card-border">
+          <CardContent className="p-4">
+            <h4 className="text-sm font-display font-bold mb-1">Campaigns Enabled</h4>
+            <p className="text-[10px] text-muted-foreground mb-3">
+              At {fmtDollar(budget)}/mo ({budgetTier} tier)
+            </p>
+            <div className="space-y-2">
+              {campaignTiers[budgetTier].map((c, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <CheckSquare className="w-3.5 h-3.5 text-primary shrink-0" />
+                  <span className="text-sm">{c}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ROI Projection */}
+      {isMediaSegment && (
+        <Card className="border border-primary/20 bg-primary/5">
+          <CardContent className="p-5">
+            <h4 className="text-sm font-display font-bold mb-3 flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" /> ROI Projection
+            </h4>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Total Investment</p>
+                <p className="text-lg font-display font-bold">{fmtDollar(projections.totalInvestment)}</p>
+                <p className="text-[10px] text-muted-foreground">Ad spend + tools</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Projected Revenue</p>
+                <p className="text-lg font-display font-bold text-primary">{fmtDollar(projections.projectedRevenue)}</p>
+                <p className="text-[10px] text-muted-foreground">{projections.leads} leads x $5K avg value</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Net Return</p>
+                <p className="text-lg font-display font-bold text-emerald-500">{fmtDollar(projections.projectedRevenue - projections.totalInvestment)}</p>
+                <p className="text-[10px] text-muted-foreground">Revenue - investment</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">ROI</p>
+                <p className="text-lg font-display font-bold text-emerald-500">{projections.roi}%</p>
+                <p className="text-[10px] text-muted-foreground">Return on investment</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Total Monthly Investment */}
+      <Card className="border border-card-border">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-display font-bold">Total Monthly Investment</h4>
+              <p className="text-xs text-muted-foreground">Ad spend ({fmtDollar(budget)}) + Platform fees ({fmtDollar(config.platformFee)})</p>
+            </div>
+            <p className="text-2xl font-display font-bold text-primary">{fmtDollar(projections.totalInvestment)}</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function SegmentDetailPage() {
   const params = useParams<{ slug: string }>();
   const { toast } = useToast();
@@ -510,10 +820,12 @@ export default function SegmentDetailPage() {
 
         {/* Tabs */}
         <Tabs defaultValue="modules" data-testid="segment-tabs">
-          <TabsList className="grid grid-cols-3 w-full max-w-sm">
+          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
             <TabsTrigger value="modules" data-testid="tab-modules">Modules</TabsTrigger>
             <TabsTrigger value="best-practices" data-testid="tab-best-practices">Best Practices</TabsTrigger>
-            <TabsTrigger value="ad-platform" data-testid="tab-ad-platform">Ad Platform</TabsTrigger>
+            <TabsTrigger value="ad-platform" data-testid="tab-ad-platform">Platform</TabsTrigger>
+            <TabsTrigger value="tools" data-testid="tab-tools-trigger">Tools</TabsTrigger>
+            <TabsTrigger value="budget" data-testid="tab-budget-trigger">Budget</TabsTrigger>
           </TabsList>
 
           <TabsContent value="modules" className="mt-4 space-y-3">
@@ -539,6 +851,23 @@ export default function SegmentDetailPage() {
 
           <TabsContent value="ad-platform" className="mt-4">
             <AdPlatformTab segmentName={segment.name} modules={segment.modules} category={segment.category} />
+          </TabsContent>
+
+          <TabsContent value="tools" className="mt-4">
+            <ToolsTab tools={segment.tools || []} />
+          </TabsContent>
+
+          <TabsContent value="budget" className="mt-4">
+            {segment.budgetConfig ? (
+              <BudgetCalculatorTab config={segment.budgetConfig} segmentName={segment.name} />
+            ) : (
+              <Card className="border border-card-border">
+                <CardContent className="p-6 text-center">
+                  <DollarSign className="w-8 h-8 text-muted-foreground mx-auto mb-2 opacity-40" />
+                  <p className="text-sm text-muted-foreground">Budget calculator not available for this segment.</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

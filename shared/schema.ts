@@ -12,6 +12,7 @@ export const segments = sqliteTable("segments", {
   status: text("status").notNull().default("not_started"),
   progress: integer("progress").notNull().default(0),
   order: integer("order").notNull(),
+  budgetConfig: text("budget_config"),
 });
 
 export const modules = sqliteTable("modules", {
@@ -52,6 +53,18 @@ export const tasks = sqliteTable("tasks", {
   order: integer("order").notNull(),
 });
 
+export const segmentTools = sqliteTable("segment_tools", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  segmentId: integer("segment_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  url: text("url").notNull(),
+  description: text("description").notNull(),
+  pricing: text("pricing").notNull(),
+  campaigns: text("campaigns").notNull(), // JSON string array
+  order: integer("order").notNull(),
+});
+
 export const creativeScores = sqliteTable("creative_scores", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   segmentId: text("segment_id").notNull().default("creative-playbook"),
@@ -62,6 +75,7 @@ export const creativeScores = sqliteTable("creative_scores", {
 
 export const insertCreativeScoreSchema = createInsertSchema(creativeScores).omit({ id: true });
 
+export const insertSegmentToolSchema = createInsertSchema(segmentTools).omit({ id: true });
 export const insertSegmentSchema = createInsertSchema(segments).omit({ id: true });
 export const insertModuleSchema = createInsertSchema(modules).omit({ id: true });
 export const insertBestPracticeSchema = createInsertSchema(bestPractices).omit({ id: true });
@@ -75,5 +89,7 @@ export type BestPractice = typeof bestPractices.$inferSelect;
 export type InsertBestPractice = z.infer<typeof insertBestPracticeSchema>;
 export type Task = typeof tasks.$inferSelect;
 export type InsertTask = z.infer<typeof insertTaskSchema>;
+export type SegmentTool = typeof segmentTools.$inferSelect;
+export type InsertSegmentTool = z.infer<typeof insertSegmentToolSchema>;
 export type CreativeScore = typeof creativeScores.$inferSelect;
 export type InsertCreativeScore = z.infer<typeof insertCreativeScoreSchema>;

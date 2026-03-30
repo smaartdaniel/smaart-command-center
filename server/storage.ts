@@ -3,6 +3,7 @@ import {
   type Module, type InsertModule, modules,
   type BestPractice, type InsertBestPractice, bestPractices,
   type Task, type InsertTask, tasks,
+  type SegmentTool, type InsertSegmentTool, segmentTools,
   type CreativeScore, type InsertCreativeScore, creativeScores,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
@@ -23,7 +24,8 @@ sqlite.exec(`
     category TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'not_started',
     progress INTEGER NOT NULL DEFAULT 0,
-    "order" INTEGER NOT NULL
+    "order" INTEGER NOT NULL,
+    budget_config TEXT
   );
   CREATE TABLE IF NOT EXISTS modules (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -58,6 +60,17 @@ sqlite.exec(`
     status TEXT NOT NULL DEFAULT 'pending',
     priority TEXT NOT NULL DEFAULT 'medium',
     owner TEXT,
+    "order" INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS segment_tools (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    segment_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    url TEXT NOT NULL,
+    description TEXT NOT NULL,
+    pricing TEXT NOT NULL,
+    campaigns TEXT NOT NULL,
     "order" INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS creative_scores (
@@ -103,6 +116,10 @@ export interface IStorage {
     totalTasks: number;
     averageProgress: number;
   };
+
+  // Segment Tools
+  getToolsBySegment(segmentId: number): SegmentTool[];
+  insertSegmentTool(t: InsertSegmentTool): SegmentTool;
 
   // Creative Scores
   saveCreativeScore(score: InsertCreativeScore): CreativeScore;
@@ -202,6 +219,14 @@ export class DatabaseStorage implements IStorage {
 
   insertBestPractice(bp: InsertBestPractice): BestPractice {
     return db.insert(bestPractices).values(bp).returning().get();
+  }
+
+  getToolsBySegment(segmentId: number): SegmentTool[] {
+    return db.select().from(segmentTools).where(eq(segmentTools.segmentId, segmentId)).orderBy(segmentTools.order).all();
+  }
+
+  insertSegmentTool(t: InsertSegmentTool): SegmentTool {
+    return db.insert(segmentTools).values(t).returning().get();
   }
 
   saveCreativeScore(score: InsertCreativeScore): CreativeScore {

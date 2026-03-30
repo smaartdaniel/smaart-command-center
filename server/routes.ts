@@ -1,8 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage, db } from "./storage";
-import { segments, modules, bestPractices } from "@shared/schema";
+import { segments, modules, bestPractices, segmentTools } from "@shared/schema";
 import { SEGMENTS } from "./seed-data";
+import { SEGMENT_TOOLS, SEGMENT_BUDGET_CONFIGS } from "./seed-tools-budget";
 import { sql } from "drizzle-orm";
 
 function seedDatabase() {
@@ -20,6 +21,7 @@ function seedDatabase() {
       status: seg.status as any,
       progress: seg.progress,
       order: seg.order,
+      budgetConfig: SEGMENT_BUDGET_CONFIGS[seg.slug] ? JSON.stringify(SEGMENT_BUDGET_CONFIGS[seg.slug]) : null,
     });
 
     for (const mod of seg.modules) {
@@ -47,6 +49,22 @@ function seedDatabase() {
           content: bp.content,
           category: bp.category,
           howTo: (bp as any).howTo || null,
+          order: i + 1,
+        });
+      });
+    }
+
+    const segTools = SEGMENT_TOOLS[seg.slug];
+    if (segTools) {
+      segTools.forEach((tool, i) => {
+        storage.insertSegmentTool({
+          segmentId: inserted.id,
+          name: tool.name,
+          type: tool.type,
+          url: tool.url,
+          description: tool.description,
+          pricing: tool.pricing,
+          campaigns: JSON.stringify(tool.campaigns),
           order: i + 1,
         });
       });
@@ -134,7 +152,10 @@ export async function registerRoutes(
       tasks: segTasks.filter(t => t.moduleId === mod.id),
     }));
 
-    res.json({ ...seg, modules: modulesWithTasks, bestPractices: bps });
+    const tools = storage.getToolsBySegment(seg.id);
+    const budgetConfig = seg.budgetConfig ? JSON.parse(seg.budgetConfig) : null;
+
+    res.json({ ...seg, modules: modulesWithTasks, bestPractices: bps, tools, budgetConfig });
   });
 
   // PATCH segment
