@@ -291,7 +291,9 @@ function ModuleCard({ mod, segmentId }: { mod: ModuleWithTasks; segmentId: numbe
   );
 }
 
-function BestPracticeCard({ bp }: { bp: BestPractice }) {
+function BestPracticeCard({ bp }: { bp: BestPractice & { howTo?: string | null } }) {
+  const [showHowTo, setShowHowTo] = useState(false);
+
   return (
     <Card className="border border-card-border" data-testid={`card-bp-${bp.id}`}>
       <CardContent className="p-4">
@@ -306,6 +308,24 @@ function BestPracticeCard({ bp }: { bp: BestPractice }) {
           <a href={bp.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 mt-3 text-xs text-primary hover:underline" data-testid={`link-bp-source-${bp.id}`}>
             <ExternalLink className="w-3 h-3" /> {bp.source}
           </a>
+        )}
+        {bp.howTo && (
+          <div className="mt-3">
+            <button
+              onClick={() => setShowHowTo(!showHowTo)}
+              className="flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+              data-testid={`button-howto-${bp.id}`}
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              {showHowTo ? "Hide Guide" : "How To Do It"}
+              <ChevronDown className={`w-3 h-3 transition-transform ${showHowTo ? "rotate-180" : ""}`} />
+            </button>
+            {showHowTo && (
+              <div className="mt-3 pt-3 border-t border-border/50">
+                {renderGuide(bp.howTo)}
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

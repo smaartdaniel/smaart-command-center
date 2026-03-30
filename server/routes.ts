@@ -46,6 +46,7 @@ function seedDatabase() {
           sourceUrl: bp.sourceUrl || null,
           content: bp.content,
           category: bp.category,
+          howTo: (bp as any).howTo || null,
           order: i + 1,
         });
       });

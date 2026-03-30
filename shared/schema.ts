@@ -36,6 +36,7 @@ export const bestPractices = sqliteTable("best_practices", {
   sourceUrl: text("source_url"),
   content: text("content").notNull(),
   category: text("category").notNull(),
+  howTo: text("how_to"),
   order: integer("order").notNull(),
 });
 

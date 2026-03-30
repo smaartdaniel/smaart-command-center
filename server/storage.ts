@@ -46,6 +46,7 @@ sqlite.exec(`
     source_url TEXT,
     content TEXT NOT NULL,
     category TEXT NOT NULL,
+    how_to TEXT,
     "order" INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS tasks (
