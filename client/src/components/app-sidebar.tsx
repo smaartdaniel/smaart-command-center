@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation } from "wouter";
+import { useHashLocation } from "wouter/use-hash-location";
 import {
   Sidebar,
   SidebarContent,
@@ -50,9 +50,14 @@ function SmaartLogo() {
 type SegmentWithCount = Segment & { moduleCount: number };
 
 export function AppSidebar() {
-  const [location] = useLocation();
+  const [location, navigate] = useHashLocation();
   const { data: segmentsList } = useQuery<SegmentWithCount[]>({
     queryKey: ["/api/segments"],
+    queryFn: async () => {
+      const res = await fetch("/api/segments");
+      if (!res.ok) throw new Error("Failed to load segments");
+      return res.json();
+    },
   });
 
   const strategies = segmentsList?.filter(s => s.category === "strategy") || [];
@@ -64,14 +69,17 @@ export function AppSidebar() {
     const isActive = location === `/segment/${seg.slug}`;
     return (
       <SidebarMenuItem key={seg.slug}>
-        <SidebarMenuButton asChild isActive={isActive} data-testid={`nav-segment-${seg.slug}`}>
-          <Link href={`/segment/${seg.slug}`}>
-            <span className="flex items-center gap-2 min-w-0">
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[seg.status]}`} />
-              {IconComponent && (typeof IconComponent === "function" ? <IconComponent className="w-4 h-4 shrink-0 opacity-60" /> : <IconComponent className="w-4 h-4 shrink-0 opacity-60" />)}
-              <span className="truncate text-sm">{seg.name}</span>
-            </span>
-          </Link>
+        <SidebarMenuButton
+          isActive={isActive}
+          data-testid={`nav-segment-${seg.slug}`}
+          onClick={() => navigate(`/segment/${seg.slug}`)}
+          className="cursor-pointer"
+        >
+          <span className="flex items-center gap-2 min-w-0">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${STATUS_COLORS[seg.status]}`} />
+            {IconComponent && (typeof IconComponent === "function" ? <IconComponent className="w-4 h-4 shrink-0 opacity-60" /> : <IconComponent className="w-4 h-4 shrink-0 opacity-60" />)}
+            <span className="truncate text-sm">{seg.name}</span>
+          </span>
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
@@ -80,15 +88,13 @@ export function AppSidebar() {
   return (
     <Sidebar data-testid="app-sidebar">
       <SidebarHeader className="px-4 py-4">
-        <Link href="/" data-testid="nav-logo">
-          <div className="flex items-center gap-2.5">
-            <SmaartLogo />
-            <div className="flex flex-col">
-              <span className="font-display font-bold text-sm tracking-tight">SMAART</span>
-              <span className="text-[10px] text-muted-foreground tracking-widest uppercase">Command Center</span>
-            </div>
+        <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate("/")} data-testid="nav-logo">
+          <SmaartLogo />
+          <div className="flex flex-col">
+            <span className="font-display font-bold text-sm tracking-tight">SMAART</span>
+            <span className="text-[10px] text-muted-foreground tracking-widest uppercase">Command Center</span>
           </div>
-        </Link>
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="px-2">
@@ -97,11 +103,14 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={location === "/"} data-testid="nav-dashboard">
-                  <Link href="/">
-                    <LayoutDashboard className="w-4 h-4 opacity-60" />
-                    <span className="text-sm">Overview</span>
-                  </Link>
+                <SidebarMenuButton
+                  isActive={location === "/"}
+                  data-testid="nav-dashboard"
+                  onClick={() => navigate("/")}
+                  className="cursor-pointer"
+                >
+                  <LayoutDashboard className="w-4 h-4 opacity-60" />
+                  <span className="text-sm">Overview</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

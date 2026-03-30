@@ -396,8 +396,14 @@ export default function SegmentDetailPage() {
   const params = useParams<{ slug: string }>();
   const { toast } = useToast();
 
-  const { data: segment, isLoading } = useQuery<SegmentDetail>({
+  const { data: segment, isLoading, error } = useQuery<SegmentDetail>({
     queryKey: ["/api/segments", params.slug],
+    queryFn: async () => {
+      const res = await fetch(`/api/segments/${params.slug}`);
+      if (!res.ok) throw new Error(`Failed to load segment: ${res.status}`);
+      return res.json();
+    },
+    enabled: !!params.slug,
   });
 
   const updateStatusMutation = useMutation({
@@ -424,8 +430,15 @@ export default function SegmentDetailPage() {
 
   if (!segment) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-muted-foreground">Segment not found.</p>
+      <div className="h-full flex flex-col items-center justify-center gap-3">
+        <p className="text-muted-foreground">
+          {error ? `Error loading segment: ${error.message}` : `Loading segment "${params.slug}"...`}
+        </p>
+        <WouterLink href="/">
+          <Button variant="outline" size="sm">
+            <ArrowLeft className="w-4 h-4 mr-1" /> Back to Overview
+          </Button>
+        </WouterLink>
       </div>
     );
   }

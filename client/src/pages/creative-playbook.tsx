@@ -77,6 +77,11 @@ function CreativeAuditTool() {
   // Load saved scores on mount
   const { data: savedScore } = useQuery<any>({
     queryKey: ["/api/creative-scores/latest"],
+    queryFn: async () => {
+      const res = await fetch("/api/creative-scores/latest");
+      if (!res.ok) return null;
+      return res.json();
+    },
   });
 
   useEffect(() => {
@@ -276,6 +281,11 @@ function AdTemplatePreviews() {
 export default function CreativePlaybookPage() {
   const { data: segment, isLoading } = useQuery<SegmentDetail>({
     queryKey: ["/api/segments", "creative-playbook"],
+    queryFn: async () => {
+      const res = await fetch("/api/segments/creative-playbook");
+      if (!res.ok) throw new Error("Failed to load creative playbook");
+      return res.json();
+    },
   });
 
   if (isLoading) {

@@ -1,6 +1,6 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-const API_BASE = ".";
+const API_BASE = "";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -47,8 +47,8 @@ export const queryClient = new QueryClient({
       queryFn: getQueryFn({ on401: "throw" }),
       refetchInterval: false,
       refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000,
-      retry: false,
+      staleTime: 60 * 1000,
+      retry: 1,
     },
     mutations: {
       retry: false,

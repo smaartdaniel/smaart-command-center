@@ -62,7 +62,7 @@ function App() {
                 <SidebarTrigger data-testid="button-sidebar-toggle" />
                 <ThemeToggle />
               </header>
-              <main className="flex-1 overflow-hidden">
+              <main className="flex-1 overflow-y-auto">
                 <Router hook={useHashLocation}>
                   <AppRouter />
                 </Router>
