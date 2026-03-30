@@ -5,6 +5,7 @@ import {
   type Task, type InsertTask, tasks,
   type SegmentTool, type InsertSegmentTool, segmentTools,
   type CreativeScore, type InsertCreativeScore, creativeScores,
+  type User, type InsertUser, users,
 } from "@shared/schema";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
@@ -80,6 +81,14 @@ sqlite.exec(`
     total_score INTEGER NOT NULL,
     created_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'member',
+    created_at TEXT
+  );
 `);
 
 export const db = drizzle(sqlite);
@@ -124,6 +133,12 @@ export interface IStorage {
   // Creative Scores
   saveCreativeScore(score: InsertCreativeScore): CreativeScore;
   getLatestCreativeScore(): CreativeScore | undefined;
+
+  // Users
+  createUser(user: InsertUser): User;
+  getUserByEmail(email: string): User | undefined;
+  getUserById(id: number): User | undefined;
+  getUserCount(): number;
 
   // Seed
   insertSegment(s: InsertSegment): Segment;
@@ -235,6 +250,26 @@ export class DatabaseStorage implements IStorage {
 
   getLatestCreativeScore(): CreativeScore | undefined {
     return db.select().from(creativeScores).orderBy(sql`id DESC`).limit(1).get();
+  }
+
+  createUser(user: InsertUser): User {
+    return db.insert(users).values({
+      ...user,
+      createdAt: new Date().toISOString(),
+    } as any).returning().get();
+  }
+
+  getUserByEmail(email: string): User | undefined {
+    return db.select().from(users).where(eq(users.email, email)).get();
+  }
+
+  getUserById(id: number): User | undefined {
+    return db.select().from(users).where(eq(users.id, id)).get();
+  }
+
+  getUserCount(): number {
+    const result = db.select({ count: sql<number>`count(*)` }).from(users).get();
+    return result?.count ?? 0;
   }
 }
 

@@ -1,7 +1,7 @@
 import { Switch, Route, Router } from "wouter";
 import { useHashLocation } from "wouter/use-hash-location";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -10,9 +10,32 @@ import Dashboard from "@/pages/dashboard";
 import SegmentDetail from "@/pages/segment-detail";
 import CreativePlaybook from "@/pages/creative-playbook";
 import NotFound from "@/pages/not-found";
-import { useState, useEffect } from "react";
+import LoginPage from "@/pages/login";
+import { useState, useEffect, createContext, useContext } from "react";
 import { Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export interface AuthUser {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  createdAt: string | null;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  logout: () => Promise<void>;
+}
+
+export const AuthContext = createContext<AuthContextType>({
+  user: null,
+  logout: async () => {},
+});
+
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
 function ThemeToggle() {
   const [dark, setDark] = useState(true);
@@ -45,35 +68,81 @@ function AppRouter() {
   );
 }
 
-function App() {
+function AuthenticatedApp({ user, logout }: { user: AuthUser; logout: () => Promise<void> }) {
   const sidebarStyle = {
     "--sidebar-width": "16rem",
     "--sidebar-width-icon": "3rem",
   };
 
   return (
+    <AuthContext.Provider value={{ user, logout }}>
+      <SidebarProvider style={sidebarStyle as React.CSSProperties}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <ThemeToggle />
+            </header>
+            <main className="flex-1 overflow-y-auto">
+              <Router hook={useHashLocation}>
+                <AppRouter />
+              </Router>
+            </main>
+          </div>
+        </div>
+      </SidebarProvider>
+    </AuthContext.Provider>
+  );
+}
+
+function App() {
+  const { data: user, isLoading, refetch } = useQuery<AuthUser | null>({
+    queryKey: ["/api/auth/me"],
+    queryFn: async () => {
+      const res = await fetch("/api/auth/me");
+      if (res.status === 401) return null;
+      if (!res.ok) return null;
+      return res.json();
+    },
+    retry: false,
+    staleTime: Infinity,
+  });
+
+  const handleLogin = () => {
+    refetch();
+  };
+
+  const handleLogout = async () => {
+    await fetch("/api/auth/logout", { method: "POST" });
+    queryClient.clear();
+    refetch();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-muted-foreground text-sm">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  return <AuthenticatedApp user={user} logout={handleLogout} />;
+}
+
+function AppWrapper() {
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <SidebarProvider style={sidebarStyle as React.CSSProperties}>
-          <div className="flex h-screen w-full">
-            <AppSidebar />
-            <div className="flex flex-col flex-1 min-w-0">
-              <header className="flex items-center justify-between px-4 py-2 border-b border-border shrink-0">
-                <SidebarTrigger data-testid="button-sidebar-toggle" />
-                <ThemeToggle />
-              </header>
-              <main className="flex-1 overflow-y-auto">
-                <Router hook={useHashLocation}>
-                  <AppRouter />
-                </Router>
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
+        <App />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );
 }
 
-export default App;
+export default AppWrapper;

@@ -93,3 +93,16 @@ export type SegmentTool = typeof segmentTools.$inferSelect;
 export type InsertSegmentTool = z.infer<typeof insertSegmentToolSchema>;
 export type CreativeScore = typeof creativeScores.$inferSelect;
 export type InsertCreativeScore = z.infer<typeof insertCreativeScoreSchema>;
+
+export const users = sqliteTable("users", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  role: text("role").notNull().default("member"), // "admin" | "member" | "viewer"
+  createdAt: text("created_at"),
+});
+
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;

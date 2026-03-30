@@ -1,10 +1,11 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage, db } from "./storage";
 import { segments, modules, bestPractices, segmentTools } from "@shared/schema";
 import { SEGMENTS } from "./seed-data";
 import { SEGMENT_TOOLS, SEGMENT_BUDGET_CONFIGS } from "./seed-tools-budget";
 import { sql } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 function seedDatabase() {
   // Check if already seeded
@@ -72,6 +73,41 @@ function seedDatabase() {
   }
 }
 
+async function seedUsers() {
+  const count = storage.getUserCount();
+  if (count > 0) return;
+
+  const hashedPassword = await bcrypt.hash("SmaartAdmin2026!", 10);
+
+  storage.createUser({
+    email: "daniel@smaartcompany.com",
+    password: hashedPassword,
+    name: "Daniel",
+    role: "admin",
+  });
+
+  storage.createUser({
+    email: "ray@smaartcompany.com",
+    password: hashedPassword,
+    name: "Ray",
+    role: "admin",
+  });
+
+  storage.createUser({
+    email: "gus@smaartcompany.com",
+    password: hashedPassword,
+    name: "Gus",
+    role: "member",
+  });
+}
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.session?.userId) {
+    return res.status(401).json({ message: "Not authenticated" });
+  }
+  next();
+}
+
 function recalculateProgress(segmentId: number) {
   const mods = storage.getModulesBySegment(segmentId);
   const avgProgress = mods.length > 0
@@ -102,6 +138,95 @@ export async function registerRoutes(
 ): Promise<Server> {
   // Seed on startup
   seedDatabase();
+  await seedUsers();
+
+  // --- Auth routes (unprotected) ---
+  app.post("/api/auth/login", async (req, res) => {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const user = storage.getUserByEmail(email);
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    req.session.userId = user.id;
+    const { password: _pw, ...safeUser } = user;
+    res.json(safeUser);
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ success: true });
+    });
+  });
+
+  app.get("/api/auth/me", (req, res) => {
+    if (!req.session?.userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const user = storage.getUserById(req.session.userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    const { password: _pw, ...safeUser } = user;
+    res.json(safeUser);
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    const { email, password, name, role } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ message: "Email, password, and name are required" });
+    }
+
+    // First user becomes admin automatically; subsequent registrations require admin
+    const userCount = storage.getUserCount();
+    if (userCount > 0) {
+      if (!req.session?.userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const currentUser = storage.getUserById(req.session.userId);
+      if (!currentUser || currentUser.role !== "admin") {
+        return res.status(403).json({ message: "Only admins can create users" });
+      }
+    }
+
+    const existing = storage.getUserByEmail(email);
+    if (existing) {
+      return res.status(409).json({ message: "User with this email already exists" });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = storage.createUser({
+      email,
+      password: hashedPassword,
+      name,
+      role: userCount === 0 ? "admin" : (role || "member"),
+    });
+
+    const { password: _pw, ...safeUser } = user;
+    res.status(201).json(safeUser);
+  });
+
+  // --- Auth middleware for all other API routes ---
+  app.use("/api", (req: Request, res: Response, next: NextFunction) => {
+    // Allow auth routes to pass through (already handled above)
+    if (req.path.startsWith("/auth/")) {
+      return next();
+    }
+    return requireAuth(req, res, next);
+  });
 
   // GET all segments with module count
   app.get("/api/segments", (_req, res) => {
